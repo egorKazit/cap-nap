@@ -1,0 +1,225 @@
+{
+    "_version": "1.49.0",
+    "sap.app": {
+        "id": "thread",
+        "type": "application",
+        "i18n": "i18n/i18n.properties",
+        "applicationVersion": {
+            "version": "0.0.1"
+        },
+        "title": "{{appTitle}}",
+        "description": "{{appDescription}}",
+        "resources": "resources.json",
+        "sourceTemplate": {
+            "id": "@sap/generator-fiori:lrop",
+            "version": "1.8.6",
+            "toolsId": "11bb775a-8e74-4d47-8383-121ab3f122d7"
+        },
+        "dataSources": {
+            "mainService": {
+                "uri": "/odata/v4/ThreadService/",
+                "type": "OData",
+                "settings": {
+                    "annotations": [],
+                    "localUri": "localService/metadata.xml",
+                    "odataVersion": "4.0"
+                }
+            }
+        }
+    },
+    "sap.ui": {
+        "technology": "UI5",
+        "icons": {
+            "icon": "",
+            "favIcon": "",
+            "phone": "",
+            "phone@2": "",
+            "tablet": "",
+            "tablet@2": ""
+        },
+        "deviceTypes": {
+            "desktop": true,
+            "tablet": true,
+            "phone": true
+        }
+    },
+    "sap.ui5": {
+        "flexEnabled": false,
+        "dependencies": {
+            "minUI5Version": "1.110.1",
+            "libs": {
+                "sap.m": {},
+                "sap.ui.core": {},
+                "sap.ushell": {},
+                "sap.fe.templates": {},
+                "sap.f": {}
+            }
+        },
+        "contentDensities": {
+            "compact": true,
+            "cozy": true
+        },
+        "models": {
+            "i18n": {
+                "type": "sap.ui.model.resource.ResourceModel",
+                "settings": {
+                    "bundleName": "thread.i18n.i18n"
+                }
+            },
+            "": {
+                "dataSource": "mainService",
+                "preload": true,
+                "settings": {
+                    "synchronizationMode": "None",
+                    "operationMode": "Server",
+                    "autoExpandSelect": true,
+                    "earlyRequests": true,
+                    "groupProperties": {
+                        "default": {
+                            "submit": "Auto"
+                        }
+                    }
+                }
+            },
+            "@i18n": {
+                "type": "sap.ui.model.resource.ResourceModel",
+                "uri": "i18n/i18n.properties"
+            }
+        },
+        "resources": {
+            "css": []
+        },
+        "routing": {
+            "config": {
+                "flexibleColumnLayout": {
+                    "defaultTwoColumnLayoutType": "TwoColumnsMidExpanded",
+                    "defaultThreeColumnLayoutType": "ThreeColumnsMidExpanded"
+                },
+                "routerClass": "sap.f.routing.Router"
+            },
+            "routes": [
+                {
+                    "pattern": ":?query:",
+                    "name": "ThreadList",
+                    "target": [
+                        "ThreadList"
+                    ]
+                },
+                {
+                    "pattern": "Thread({key}):?query:",
+                    "name": "ThreadObjectPage",
+                    "target": [
+                        "ThreadList",
+                        "ThreadObjectPage"
+                    ]
+                },
+                {
+                    "pattern": "Thread({key})/note({key2}):?query:",
+                    "name": "NoteObjectPage",
+                    "target": [
+                        "ThreadList",
+                        "ThreadObjectPage",
+                        "NoteObjectPage"
+                    ]
+                }
+            ],
+            "targets": {
+                "ThreadList": {
+                    "type": "Component",
+                    "id": "ThreadList",
+                    "name": "sap.fe.templates.ListReport",
+                    "options": {
+                        "settings": {
+                            "entitySet": "Thread",
+                            "variantManagement": "Page",
+                            "navigation": {
+                                "Thread": {
+                                    "detail": {
+                                        "route": "ThreadObjectPage"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "controlAggregation": "beginColumnPages",
+                    "contextPattern": ""
+                },
+                "ThreadObjectPage": {
+                    "type": "Component",
+                    "id": "ThreadObjectPage",
+                    "name": "sap.fe.templates.ObjectPage",
+                    "options": {
+                        "settings": {
+                            "editableHeaderContent": false,
+                            "entitySet": "Thread",
+                            "navigation": {
+                                "note": {
+                                    "detail": {
+                                        "route": "NoteObjectPage"
+                                    }
+                                }
+                            },
+                            "content": {
+                                "body": {
+                                    "sections": {
+                                        "AttachmentFragment": {
+                                            "template": "thread.ext.fragment.AttachmentFragment",
+                                            "position": {
+                                                "placement": "After",
+                                                "anchor": "NoteId"
+                                            },
+                                            "title": "Attachment",
+                                            "type": "XMLFragment"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "controlAggregation": "midColumnPages",
+                    "contextPattern": "/Thread({key})"
+                },
+                "NoteObjectPage": {
+                    "type": "Component",
+                    "id": "NoteObjectPage",
+                    "name": "sap.fe.templates.ObjectPage",
+                    "options": {
+                        "settings": {
+                            "editableHeaderContent": false,
+                            "entitySet": "Note",
+                            "controlConfiguration": {
+                                "@com.sap.vocabularies.UI.v1.FieldGroup#MainInfo": {
+                                    "fields": {
+                                        "DataField::text": {
+                                            "formatOptions": {
+                                                "textLinesEdit": "30",
+                                                "textMaxCharactersDisplay": "Infinity"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "controlAggregation": "endColumnPages",
+                    "contextPattern": "/Thread({key})/note({key2})"
+                }
+            }
+        },
+        "extends": {
+            "extensions": {
+                "sap.ui.controllerExtensions": {}
+            }
+        },
+        "rootView": {
+            "viewName": "sap.fe.templates.RootContainer.view.Fcl",
+            "type": "XML",
+            "async": true,
+            "id": "appRootView"
+        }
+    },
+    "sap.fiori": {
+        "registrationIds": [],
+        "archeType": "transactional"
+    }
+}

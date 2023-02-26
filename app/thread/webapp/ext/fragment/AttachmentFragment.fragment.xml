@@ -1,0 +1,40 @@
+<core:FragmentDefinition xmlns:core="sap.ui.core" xmlns="sap.m" xmlns:macros="sap.fe.macros">
+    <upload:UploadSet
+        id="uploadSet"
+        core:require="{ handler: 'thread/ext/fragment/AttachmentFragment'}"
+        instantUpload="false"
+        uploadEnabled="{= ${IsActiveEntity} === false}"
+        afterItemAdded="handler.onAfterItemAdded"
+        uploadCompleted="handler.onUploadCompleted"
+        uploadButtonInvisible="{= ${IsActiveEntity} === true}"
+        items="{ 
+                        path: 'attachment',
+					    parameters: {
+						    $orderby: 'createdAt desc'
+						},
+						templateShareable: false
+                    }"
+        xmlns:upload="sap.m.upload"
+    >
+        <upload:toolbar />
+        <upload:items>
+            <upload:UploadSetItem
+                fileName="{fileName}"
+                mediaType="{mediaType}"
+                url="{url}"
+                enabledEdit="{= ${IsActiveEntity} === false}"
+                visibleEdit="{= ${IsActiveEntity} === false}"
+                enabledRemove="{= ${IsActiveEntity} === false}"
+                visibleRemove="{= ${IsActiveEntity} === false}"
+                openPressed="handler.onOpenPressed"
+                removePressed="handler.removePressed"
+                thumbnailUrl="{ path: 'mediaType', formatter: 'handler.formatThumbnailUrl' }">
+                <upload:attributes>
+                    <ObjectAttribute title="Uploaded By" text="{createdBy}" active="false" />
+                    <ObjectAttribute title="Uploaded on" text="{createdAt}" active="false" />
+                    <ObjectAttribute title="File Size" text="{size}" active="false" />
+                </upload:attributes>
+            </upload:UploadSetItem>
+        </upload:items>
+    </upload:UploadSet>
+</core:FragmentDefinition>

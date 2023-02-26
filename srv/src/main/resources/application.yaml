@@ -1,0 +1,26 @@
+---
+spring:
+  config.activate.on-profile: default
+  web.resources.static-locations: "file:./app"
+  sql:
+    init:
+      mode: never
+  datasource:
+    url: "jdbc:sqlite:sqlite.db"
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+cds:
+  datasource:
+    auto-config.enabled: false
+  security:
+    mock:
+      defaultUsers: false
+dms:
+  target:
+    folder: /tmp
+security:
+  username: ${nap_cap_username}
+  password: ${nap_cap_password}
+server:
+  port : 8082
