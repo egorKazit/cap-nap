@@ -28,7 +28,8 @@ public class AppSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(@NonNull HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.csrf().disable().authorizeHttpRequests().anyRequest().authenticated().and().formLogin().and().httpBasic();
+        httpSecurity.csrf().disable().authorizeHttpRequests().anyRequest().authenticated().and().formLogin().and().httpBasic()
+                .and().headers().frameOptions().disable();
         return httpSecurity.build();
     }
 
