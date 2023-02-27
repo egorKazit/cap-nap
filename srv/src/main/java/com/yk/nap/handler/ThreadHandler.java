@@ -4,6 +4,7 @@ import com.sap.cds.Row;
 import com.sap.cds.ql.CQL;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
+import com.sap.cds.ql.cqn.CqnReference;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.ApplicationService;
@@ -20,7 +21,6 @@ import com.yk.gen.threadservice.Thread;
 import com.yk.gen.threadservice.*;
 import com.yk.nap.configuration.ParameterHolder;
 import lombok.NonNull;
-import lombok.SneakyThrows;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 @Service
 @ServiceName(ThreadService_.CDS_NAME)
@@ -42,6 +43,7 @@ public class ThreadHandler implements EventHandler {
     private final ParameterHolder parameterHolder;
     private AtomicInteger threadId;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public ThreadHandler(PersistenceService persistenceService, @Qualifier(ThreadReplicationService_.CDS_NAME) ApplicationService threadReplicationService, ParameterHolder parameterHolder) {
         this.persistenceService = persistenceService;
         this.threadReplicationService = threadReplicationService;
@@ -147,7 +149,6 @@ public class ThreadHandler implements EventHandler {
         });
     }
 
-    @SneakyThrows
     @On(event = DraftService.EVENT_DRAFT_PATCH, entity = Attachment_.CDS_NAME)
     public Attachment onAttachmentsUpload(DraftPatchEventContext context, @NonNull Attachment attachment) throws IOException {
         MimeTypes allMimeTypes = MimeTypes.getDefaultMimeTypes();
@@ -174,9 +175,14 @@ public class ThreadHandler implements EventHandler {
     }
 
     @After(event = DraftService.EVENT_READ, entity = Attachment_.CDS_NAME)
-    public void onAttachmentsRead(@NonNull CdsReadEventContext context) throws IOException, MimeTypeException {
+    public void onAttachmentsDownload(@NonNull CdsReadEventContext context) throws IOException, MimeTypeException {
         List<Attachment> attachments = persistenceService.run(Select.cqn(context.getCqn().toString()).columns(Attachment.ID, Attachment.MEDIA_TYPE, Attachment.FILE_NAME, Attachment.SIZE, Attachment.URL)).listOf(Attachment.class);
-        if (attachments == null || attachments.size() != 1 || context.getCqn().items().stream().noneMatch(cqnSelectListItem -> cqnSelectListItem.asRef().segments().stream().anyMatch(segment -> segment.id().equals(Attachment.CONTENT))))
+        var requestedFields = context.getCqn().items().stream().flatMap(cqnSelectListItem ->
+                cqnSelectListItem.isRef() ?
+                        cqnSelectListItem.asRef().segments().stream()
+                                .map(CqnReference.Segment::id) : Stream.empty()).sorted().toList();
+        var expectedFields = Stream.of(Attachment.CONTENT, Attachment.MEDIA_TYPE).sorted().toList();
+        if (!requestedFields.equals(expectedFields))
             return;
         Attachment attachment = attachments.get(0);
         MimeTypes allMimeTypes = MimeTypes.getDefaultMimeTypes();

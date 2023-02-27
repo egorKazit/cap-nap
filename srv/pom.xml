@@ -16,6 +16,7 @@
 
     <!-- ACTUAL DEPENDENCIES -->
     <dependencies>
+
         <!-- CDS SPRING BOOT STARTER -->
         <dependency>
             <groupId>com.sap.cds</groupId>
@@ -32,6 +33,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <version>2.1.214</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -111,9 +113,6 @@
                         <goals>
                             <goal>install-node</goal>
                         </goals>
-                        <configuration>
-                            <skip>${cdsdk-global}</skip>
-                        </configuration>
                     </execution>
 
                     <execution>
@@ -121,9 +120,6 @@
                         <goals>
                             <goal>install-cdsdk</goal>
                         </goals>
-                        <configuration>
-                            <skip>${cdsdk-global}</skip>
-                        </configuration>
                     </execution>
 
                     <execution>
@@ -134,8 +130,9 @@
                         <configuration>
                             <commands>
                                 <command>build --for java</command>
-<!--                                <command>deploy &#45;&#45;to h2 &#45;&#45;dry > "${project.basedir}/src/main/resources/schema.sql" </command>-->
-                                <command>deploy --to sqlite --dry > "${project.basedir}/src/main/resources/schema.sql"</command>
+                                <!--                                <command>deploy &#45;&#45;to h2 &#45;&#45;dry > "${project.basedir}/src/main/resources/schema.sql" </command>-->
+                                <command>deploy --to sqlite --dry > "${project.basedir}/src/main/resources/schema.sql"
+                                </command>
                             </commands>
                         </configuration>
                     </execution>
@@ -155,13 +152,4 @@
         </plugins>
     </build>
 
-    <profiles>
-        <!-- A profile that uses global installation of @sap/cds-dk -->
-        <profile>
-            <id>cdsdk-global</id>
-            <properties>
-                <cdsdk-global>true</cdsdk-global>
-            </properties>
-        </profile>
-    </profiles>
 </project>
