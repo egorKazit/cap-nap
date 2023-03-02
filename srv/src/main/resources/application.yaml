@@ -17,8 +17,10 @@ cds:
     mock:
       defaultUsers: false
 dms:
+  type: local
   target:
     folder: /tmp
+    credentials-file: ""
 security:
   username: ${nap_cap_username}
   password: ${nap_cap_password}

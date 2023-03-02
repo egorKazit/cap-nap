@@ -10,9 +10,17 @@ import org.springframework.context.annotation.PropertySource;
 @PropertySource("classpath:application.yaml")
 public class ParameterHolder {
 
+    @Value("${dms.type:local}")
+    @Getter
+    private String dmsType;
+
     @Value("${dms.target.folder}")
     @Getter
     private String dmsTargetFolder;
+
+    @Value("${dms.target.credentials-file}")
+    @Getter
+    private String dmsTargetCredentialsFile;
 
     @Value("${security.username}")
     @Getter(AccessLevel.PACKAGE)

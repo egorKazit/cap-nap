@@ -36,10 +36,11 @@ entity Note : cuid, managed {
 
 entity Attachment : cuid, managed {
 
-    content   : LargeBinary @Core.MediaType  : mediaType;
-    mediaType : String      @Core.IsMediaType: true;
-    fileName  : String;
-    size      : Integer;
-    url       : String;
-    thread    : Association to one Thread not null;
+    content           : LargeBinary @Core.MediaType  : mediaType;
+    mediaType         : String      @Core.IsMediaType: true;
+    fileName          : String;
+    size              : Integer;
+    url               : String;
+    internalQualifier : String;
+    thread            : Association to one Thread not null;
 }

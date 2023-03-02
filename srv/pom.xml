@@ -33,7 +33,6 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>2.1.214</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -61,6 +60,26 @@
         <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+        </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>com.google.oauth-client</groupId>-->
+<!--            <artifactId>google-oauth-client-jetty</artifactId>-->
+<!--        </dependency>-->
+
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-drive</artifactId>
         </dependency>
 
         <dependency>

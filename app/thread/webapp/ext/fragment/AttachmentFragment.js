@@ -54,14 +54,12 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/m/MessageToast"], function (Co
         onOpenPressed: function (oEvent) {
             oEvent.preventDefault();
             var item = oEvent.getSource();
-            fetch(item.getUrl()).then((res) => {
-                return res.blob();
-            }).then((data) => {
-                let hyperlink = document.createElement("a");
-                hyperlink.href = window.URL.createObjectURL(data);
-                hyperlink.download = item.getFileName();
-                hyperlink.click();
-            });
+            const anchor = document.createElement("a");
+            anchor.href = item.getUrl();
+            anchor.download = item.getFileName();
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
         },
 
         removePressed: function (oEvent) {
@@ -86,7 +84,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/m/MessageToast"], function (Co
             });
 
         },
-        
+
         formatThumbnailUrl: function (mediaType) {
             var iconUrl;
             switch (mediaType) {

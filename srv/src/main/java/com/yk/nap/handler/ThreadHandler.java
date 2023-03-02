@@ -4,12 +4,9 @@ import com.sap.cds.Row;
 import com.sap.cds.ql.CQL;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
-import com.sap.cds.ql.cqn.CqnReference;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.ApplicationService;
-import com.sap.cds.services.cds.CdsReadEventContext;
-import com.sap.cds.services.draft.DraftPatchEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.*;
@@ -19,20 +16,13 @@ import com.yk.gen.threadreplicationservice.RevertContext;
 import com.yk.gen.threadreplicationservice.ThreadReplicationService_;
 import com.yk.gen.threadservice.Thread;
 import com.yk.gen.threadservice.*;
-import com.yk.nap.configuration.ParameterHolder;
 import lombok.NonNull;
-import org.apache.tika.mime.MimeType;
-import org.apache.tika.mime.MimeTypeException;
-import org.apache.tika.mime.MimeTypes;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 @Service
 @ServiceName(ThreadService_.CDS_NAME)
@@ -40,14 +30,12 @@ public class ThreadHandler implements EventHandler {
 
     private final PersistenceService persistenceService;
     private final ApplicationService threadReplicationService;
-    private final ParameterHolder parameterHolder;
     private AtomicInteger threadId;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    public ThreadHandler(PersistenceService persistenceService, @Qualifier(ThreadReplicationService_.CDS_NAME) ApplicationService threadReplicationService, ParameterHolder parameterHolder) {
+    public ThreadHandler(PersistenceService persistenceService, @Qualifier(ThreadReplicationService_.CDS_NAME) ApplicationService threadReplicationService) {
         this.persistenceService = persistenceService;
         this.threadReplicationService = threadReplicationService;
-        this.parameterHolder = parameterHolder;
     }
 
     @Before(entity = Thread_.CDS_NAME, event = DraftService.EVENT_CREATE)
@@ -82,7 +70,7 @@ public class ThreadHandler implements EventHandler {
         threads.stream().parallel().forEach(thread -> {
             var attachments = thread.getAttachment();
             if (attachments == null) return;
-            attachments.forEach(attachment -> attachment.setUrl("/odata/v4/ThreadService/Attachment" + "(ID=" + attachment.getId() + ",IsActiveEntity=" + attachment.getIsActiveEntity() + ")/content"));
+            attachments.forEach(attachment -> attachment.setUrl("/odata/v4/ThreadService/Attachment(ID=" + attachment.getId() + ",IsActiveEntity=" + attachment.getIsActiveEntity() + ")/content"));
             if (attachments.isEmpty()) return;
             persistenceService.run(Update.entity(Attachment_.class).entries(attachments));
         });
@@ -127,76 +115,6 @@ public class ThreadHandler implements EventHandler {
         if (threads == null || threads.isEmpty()) throw new ServiceException("Can not process empty thread list");
         threads.stream().parallel().forEach(thread -> persistenceService.run(Update.entity(Thread_.class).data(Thread.STATUS, "Completed").where(existingThread -> existingThread.ID().eq((String) thread.get(Thread.ID)))));
         publishContext.setCompleted();
-    }
-
-    @Before(entity = Attachment_.CDS_NAME, event = DraftService.EVENT_DRAFT_NEW)
-    public void enrichAttachments(@NonNull List<Attachment> attachments) {
-        attachments.forEach(attachment -> {
-            attachment.setId(UUID.randomUUID().toString());
-            attachment.setUrl("/odata/v4/ThreadService/Attachment" + "(ID=" + attachment.getId() + ",IsActiveEntity=" + attachment.getIsActiveEntity() + ")/content");
-        });
-    }
-
-    @Before(event = DraftService.EVENT_DRAFT_NEW, entity = Attachment_.CDS_NAME)
-    public void checkContentType(@NonNull List<Attachment> attachments) {
-        attachments.forEach(attachment -> {
-            try {
-                MimeTypes.getDefaultMimeTypes().forName(attachment.getMediaType());
-            } catch (MimeTypeException e) {
-                e.printStackTrace();
-                throw new ServiceException("Unsupported type");
-            }
-        });
-    }
-
-    @On(event = DraftService.EVENT_DRAFT_PATCH, entity = Attachment_.CDS_NAME)
-    public Attachment onAttachmentsUpload(DraftPatchEventContext context, @NonNull Attachment attachment) throws IOException {
-        MimeTypes allMimeTypes = MimeTypes.getDefaultMimeTypes();
-        MimeType mimeType;
-        try {
-            mimeType = allMimeTypes.forName(attachment.getMediaType());
-        } catch (MimeTypeException e) {
-            e.printStackTrace();
-            throw new ServiceException("Unsupported type");
-        }
-
-        InputStream inputStream = attachment.getContent();
-        if (inputStream == null) return null;
-
-        String name = new File(parameterHolder.getDmsTargetFolder(), "thread-attachment-" + attachment.getId() + mimeType.getExtension()).getAbsolutePath();
-        OutputStream outputStream = new FileOutputStream(name);
-        outputStream.write(inputStream.readAllBytes());
-        outputStream.flush();
-        outputStream.close();
-        attachment.setContent(null);
-        context.setResult(List.of(attachment));
-        context.setCompleted();
-        return attachment;
-    }
-
-    @After(event = DraftService.EVENT_READ, entity = Attachment_.CDS_NAME)
-    public void onAttachmentsDownload(@NonNull CdsReadEventContext context) throws IOException, MimeTypeException {
-        List<Attachment> attachments = persistenceService.run(Select.cqn(context.getCqn().toString()).columns(Attachment.ID, Attachment.MEDIA_TYPE, Attachment.FILE_NAME, Attachment.SIZE, Attachment.URL)).listOf(Attachment.class);
-        var requestedFields = context.getCqn().items().stream().flatMap(cqnSelectListItem ->
-                cqnSelectListItem.isRef() ?
-                        cqnSelectListItem.asRef().segments().stream()
-                                .map(CqnReference.Segment::id) : Stream.empty()).sorted().toList();
-        var expectedFields = Stream.of(Attachment.CONTENT, Attachment.MEDIA_TYPE).sorted().toList();
-        if (!requestedFields.equals(expectedFields))
-            return;
-        Attachment attachment = attachments.get(0);
-        MimeTypes allMimeTypes = MimeTypes.getDefaultMimeTypes();
-        MimeType mimeType;
-        try {
-            mimeType = allMimeTypes.forName(attachment.getMediaType());
-        } catch (MimeTypeException e) {
-            e.printStackTrace();
-            mimeType = new MimeTypes().forName(MimeTypes.PLAIN_TEXT);
-        }
-        String name = new File(parameterHolder.getDmsTargetFolder(), "thread-attachment-" + attachment.getId() + mimeType.getExtension()).getAbsolutePath();
-        InputStream fileInputStream = new FileInputStream(name);
-        attachment.setContent(fileInputStream);
-        context.setResult(List.of(attachment));
     }
 
     private void initCounter() {
