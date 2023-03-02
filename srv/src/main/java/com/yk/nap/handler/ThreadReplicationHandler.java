@@ -23,6 +23,7 @@ public class ThreadReplicationHandler implements EventHandler {
 
     private final ApplicationService threadReplicationService;
 
+    @SuppressWarnings("all")
     public ThreadReplicationHandler(@Qualifier(ThreadService_.CDS_NAME) ApplicationService threadReplicationService) {
         this.threadReplicationService = threadReplicationService;
     }
