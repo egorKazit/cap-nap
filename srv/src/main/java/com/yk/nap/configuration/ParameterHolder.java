@@ -4,10 +4,12 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @PropertySource("classpath:application.yaml")
+@Primary
 public class ParameterHolder {
 
     @Value("${dms.type:local}")
@@ -22,12 +24,9 @@ public class ParameterHolder {
     @Getter
     private String dmsTargetCredentialsFile;
 
-    @Value("${security.username}")
+    @Value("${security.credentials-file}")
     @Getter(AccessLevel.PACKAGE)
-    private String username;
+    private String credentialsFile;
 
-    @Value("${security.password}")
-    @Getter(AccessLevel.PACKAGE)
-    private String password;
 
 }

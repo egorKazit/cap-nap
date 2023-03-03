@@ -9,5 +9,13 @@
   ],
   "devDependencies": {
     "@sap/ux-specification": "^1.102.16"
+  },
+  "cds": {
+    "requires": {
+      "com.sap.gateway.srvd_a2x.zykza_threadheader_api_def.v0001": {
+        "kind": "odata",
+        "model": "srv/external/ZYKZA_THREADHEADER_API_BND.edmx"
+      }
+    }
   }
 }
