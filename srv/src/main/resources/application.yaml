@@ -18,16 +18,13 @@ cds:
       defaultUsers: false
 
   remote.services:
-  - name: "com.sap.gateway.srvd_a2x.zykza_threadheader_api_def.v0001"
-    model: "com.sap.gateway.srvd_a2x.zykza_threadheader_api_def.v0001"
-    destination:
-      name: "s4-rap-replicator-api"
-      type: "odata-v4"
-      retrievalStrategy: "AlwaysProvider"
-      suffix: "/sap/opu/odata4/sap/zykza_threadheader_api_bnd/srvd_a2x/sap"
-      service: "/zykza_threadheader_api_def/0001"
-      uri: "https://6654aaf7-905f-48ea-b013-3811c03fcba8.abap.us10.hana.ondemand.com/sap/opu/odata4/sap/zykza_threadheader_api_bnd/srvd_a2x/sap/"
-      credentials: "/media/yahor/Others/downloads/default_key-1.json"
+    - name: "com.sap.gateway.srvd_a2x.zykza_threadheader_api_def.v0001"
+      model: "com.sap.gateway.srvd_a2x.zykza_threadheader_api_def.v0001"
+      destination:
+        name: "s4-rap-replicator-api"
+        type: "odata-v4"
+        retrievalStrategy: "AlwaysProvider"
+
 workflow:
   uri: "https://api.workflow-sap.cfapps.us10.hana.ondemand.com/workflow-service/rest"
   credentials: "/media/yahor/Others/downloads/default_key-2.json"
