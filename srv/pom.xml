@@ -31,6 +31,38 @@
         </dependency>
 
         <dependency>
+            <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
+            <artifactId>cloudplatform-connectivity</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sap.cds</groupId>
+            <artifactId>cds-feature-remote-odata</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- CLOUD SDK dependencies -->
+        <dependency>
+            <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
+            <artifactId>resilience</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
+            <artifactId>scp-cf</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sap.cloud.security.xsuaa</groupId>
+            <artifactId>token-client</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sap.cloud.security</groupId>
+            <artifactId>env</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
@@ -66,11 +98,6 @@
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
         </dependency>
-
-<!--        <dependency>-->
-<!--            <groupId>com.google.oauth-client</groupId>-->
-<!--            <artifactId>google-oauth-client-jetty</artifactId>-->
-<!--        </dependency>-->
 
         <dependency>
             <groupId>com.google.auth</groupId>
@@ -149,7 +176,6 @@
                         <configuration>
                             <commands>
                                 <command>build --for java</command>
-                                <!--                                <command>deploy &#45;&#45;to h2 &#45;&#45;dry > "${project.basedir}/src/main/resources/schema.sql" </command>-->
                                 <command>deploy --to sqlite --dry > "${project.basedir}/src/main/resources/schema.sql"
                                 </command>
                             </commands>

@@ -16,13 +16,24 @@ cds:
   security:
     mock:
       defaultUsers: false
+
+  remote.services:
+  - name: "com.sap.gateway.srvd_a2x.zykza_threadheader_api_def.v0001"
+    model: "com.sap.gateway.srvd_a2x.zykza_threadheader_api_def.v0001"
+    destination:
+      name: "s4-rap-replicator-api"
+      type: "odata-v4"
+      retrievalStrategy: "AlwaysProvider"
+
+workflow:
+  uri: ""
+  credentials: ""
 dms:
   type: local
   target:
     folder: /tmp
     credentials-file: ""
 security:
-  username: ${nap_cap_username}
-  password: ${nap_cap_password}
+  credentials-file: "./srv/src/main/resources/creds.json"
 server:
   port : 8082

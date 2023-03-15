@@ -1,4 +1,4 @@
-package com.yk.nap.service;
+package com.yk.nap.service.attachment;
 
 import com.yk.gen.threadservice.Attachment;
 

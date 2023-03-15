@@ -1,30 +1,25 @@
-package com.yk.nap.configuration;
+package com.yk.nap.configuration.security;
 
 import lombok.NonNull;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.provisioning.UserDetailsManager;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @Order(1)
+@Primary
+@Log4j2
 public class AppSecurityConfig {
-
-    private final UserDetailsManager userDetailsManager;
-
-    public AppSecurityConfig(UserDetailsManager userDetailsManager, @NonNull ParameterHolder parameterHolder) {
-        this.userDetailsManager = userDetailsManager;
-        setupUsers(parameterHolder);
-    }
 
     @Bean
     public SecurityFilterChain filterChain(@NonNull HttpSecurity httpSecurity) throws Exception {
@@ -33,9 +28,15 @@ public class AppSecurityConfig {
         return httpSecurity.build();
     }
 
-    private void setupUsers(@NonNull ParameterHolder parameterHolder) {
-        UserDetails userWithP = new User(parameterHolder.getUsername(), "{noop}" + parameterHolder.getPassword(), List.of(new SimpleGrantedAuthority("ThreadOperator")));
-        userDetailsManager.createUser(userWithP);
+    @Bean
+    public UserDetailsService users(UserHolder userHolder) {
+
+        var users = userHolder.users.stream().map(user -> User.withUsername(user.getUsername())
+                .password("{noop}" + user.getPassword())
+                .roles()
+                .build()).toArray(UserDetails[]::new);
+
+        return new InMemoryUserDetailsManager(users);
     }
 
 }

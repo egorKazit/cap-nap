@@ -9,5 +9,24 @@
   ],
   "devDependencies": {
     "@sap/ux-specification": "^1.102.16"
+  },
+  "cds": {
+    "requires": {
+      "com.sap.gateway.srvd_a2x.zykza_threadheader_api_def.v0001": {
+        "kind": "odata",
+        "model": "srv/external/ZYKZA_THREADHEADER_API_BND.edmx"
+      },
+      "ZYKZ_GW_SERVICE_SRV": {
+        "kind": "odata-v2",
+        "model": "srv/external/OP_LOCAL_SERVICE"
+      },
+      "Workflow.API.for.Cloud.Foundry": {
+        "kind": "rest",
+        "model": "srv/external/SAP_CP_Workflow_CF"
+      }
+    }
+  },
+  "dependencies": {
+    "@sap-cloud-sdk/http-client": "^3.0.1"
   }
 }

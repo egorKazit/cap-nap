@@ -7,18 +7,20 @@ using {
 } from '@sap/cds/common';
 
 entity Thread : cuid, managed {
-    thread     : String  @assert.notNull  @readonly;
-    name       : String  @assert.notNull;
-    status     : String  @assert.range enum {
+    thread         : String  @assert.notNull  @readonly;
+    name           : String  @assert.notNull;
+    status         : String  @assert.range enum {
         Initial;
         Publishing;
         Published;
         Completed;
     } default 'Initial';
-    note       : Composition of many Note
-                     on note.thread = $self;
-    attachment : Composition of many Attachment
-                     on attachment.thread = $self;
+    replicatedUUID : UUID;
+    workflowUUID   : UUID;
+    note           : Composition of many Note
+                         on note.thread = $self;
+    attachment     : Composition of many Attachment
+                         on attachment.thread = $self;
 }
 
 entity Note : cuid, managed {

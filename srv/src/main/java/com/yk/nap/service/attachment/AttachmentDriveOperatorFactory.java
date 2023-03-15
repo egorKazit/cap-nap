@@ -1,4 +1,4 @@
-package com.yk.nap.service;
+package com.yk.nap.service.attachment;
 
 import com.yk.nap.configuration.ParameterHolder;
 import lombok.NoArgsConstructor;
