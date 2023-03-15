@@ -1,6 +1,7 @@
 package com.yk.nap.handler;
 
 import com.sap.cds.ql.Select;
+import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnReference;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.CdsDeleteEventContext;
@@ -70,18 +71,22 @@ public class AttachmentHandler implements EventHandler {
 
     @On(entity = Attachment_.CDS_NAME, event = DraftService.EVENT_DRAFT_PATCH)
     public Attachment onAttachmentsUpload(DraftPatchEventContext context, @NonNull Attachment attachment) {
-        InputStream inputStream = attachment.getContent();
-        if (inputStream == null)
-            return null;
         Attachment attachmentToProcess = draftService.run(Select.from(context.getCqn().asUpdate().ref())).single(Attachment.class);
-        attachmentToProcess.setContent(attachment.getContent());
-        try {
-            attachmentDriveOperator.update(attachmentToProcess);
-        } catch (IOException ioException) {
-            log.atError().log("Error on upload: " + ioException.getMessage());
-            throw new ServiceException("Error at content processing of file " + attachment.getFileName());
+        InputStream inputStream = attachment.getContent();
+        if (inputStream != null) {
+            attachmentToProcess.setContent(inputStream);
+            try {
+                attachmentDriveOperator.update(attachmentToProcess);
+            } catch (IOException ioException) {
+                log.atError().log("Error on upload: " + ioException.getMessage());
+                throw new ServiceException("Error at content processing of file " + attachment.getFileName());
+            }
+            attachment.setContent(null);
         }
-        attachment.setContent(null);
+        if (attachment.getFileName() != null) {
+            attachmentToProcess.setFileName(attachment.getFileName());
+            draftService.run(Update.entity(Attachment_.class).entry(attachmentToProcess));
+        }
         context.setResult(List.of(attachment));
         context.setCompleted();
         return attachment;
