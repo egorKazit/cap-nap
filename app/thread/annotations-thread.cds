@@ -132,7 +132,7 @@ annotate ThreadService.Thread with @UI: {
             ![@UI.Hidden]: {$edmJson: {$Or: [
                 {$Ne: [
                     {$Path: 'status'},
-                    'Published'
+                    'Publishing'
                 ]},
                 {$Ne: [
                     {$Path: 'IsActiveEntity'},

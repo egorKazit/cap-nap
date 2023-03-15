@@ -3,9 +3,12 @@ package com.yk.nap.configuration;
 import lombok.AccessLevel;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
+
+import java.util.List;
 
 @Configuration
 @PropertySource("classpath:application.yaml")
@@ -25,8 +28,15 @@ public class ParameterHolder {
     private String dmsTargetCredentialsFile;
 
     @Value("${security.credentials-file}")
-    @Getter(AccessLevel.PACKAGE)
+    @Getter
     private String credentialsFile;
 
+    @Value("${workflow.credentials}")
+    @Getter
+    private String workflowCredentials;
+
+    @Value("${workflow.uri}")
+    @Getter
+    private String workflowUrl;
 
 }

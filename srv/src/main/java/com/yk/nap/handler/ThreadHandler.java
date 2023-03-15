@@ -7,6 +7,7 @@ import com.sap.cds.ql.Update;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.ApplicationService;
+import com.sap.cds.services.cds.CdsDeleteEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.*;
@@ -16,26 +17,34 @@ import com.yk.gen.threadreplicationservice.RevertContext;
 import com.yk.gen.threadreplicationservice.ThreadReplicationService_;
 import com.yk.gen.threadservice.Thread;
 import com.yk.gen.threadservice.*;
+import com.yk.nap.service.workflow.WorkflowOperator;
 import lombok.NonNull;
+import lombok.extern.log4j.Log4j2;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @ServiceName(ThreadService_.CDS_NAME)
+@Log4j2
 public class ThreadHandler implements EventHandler {
 
     private final PersistenceService persistenceService;
     private final ApplicationService threadReplicationService;
+    private final WorkflowOperator workflowOperator;
     private AtomicInteger threadId;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    public ThreadHandler(PersistenceService persistenceService, @Qualifier(ThreadReplicationService_.CDS_NAME) ApplicationService threadReplicationService) {
+    public ThreadHandler(PersistenceService persistenceService, @Qualifier(ThreadReplicationService_.CDS_NAME) ApplicationService threadReplicationService, WorkflowOperator workflowOperator) {
         this.persistenceService = persistenceService;
         this.threadReplicationService = threadReplicationService;
+        this.workflowOperator = workflowOperator;
     }
 
     @Before(entity = Thread_.CDS_NAME, event = DraftService.EVENT_CREATE)
@@ -51,6 +60,16 @@ public class ThreadHandler implements EventHandler {
     public void setThreadSemanticId(@NonNull List<Thread> threads) {
         initCounter();
         threads.forEach(thread -> thread.setThread(String.valueOf(threadId.incrementAndGet())));
+    }
+
+    @Before(entity = Thread_.CDS_NAME, event = DraftService.EVENT_DELETE)
+    public void validateEntriesBeforeDelete(CdsDeleteEventContext eventContext) {
+        var threadsToDelete = persistenceService.run(Select.from(eventContext.getCqn().ref())).listOf(Thread.class);
+        threadsToDelete.forEach(thread -> {
+            if (thread.getStatus().equals("Published")) {
+                throw new ServiceException("Published thread can not be removed. Please complete " + thread.getName());
+            }
+        });
     }
 
     @After(entity = Thread_.CDS_NAME, event = {DraftService.EVENT_CREATE, DraftService.EVENT_UPDATE})
@@ -85,7 +104,19 @@ public class ThreadHandler implements EventHandler {
             ProcessContext processContext = ProcessContext.create();
             processContext.setThreadId(thread.get(Thread.ID).toString());
             threadReplicationService.emit(processContext);
-            persistenceService.run(Update.entity(Thread_.class).data(Thread.STATUS, "Publishing").where(existingThread -> existingThread.ID().eq((String) thread.get(Thread.ID))));
+            var replicatedUUID = processContext.getResult();
+            persistenceService.run(Update.entity(Thread_.class)
+                    .data(Map.of(Thread.STATUS, "Publishing", Thread.REPLICATED_UUID, replicatedUUID))
+                    .where(existingThread -> existingThread.ID().eq((String) thread.get(Thread.ID))));
+            try {
+                WorkflowOperator.WorkflowPresentation workflowPresentation = workflowOperator
+                        .startWorkflow("cap.rap.wf.caprapworkflow", new JSONObject().put("thread", new JSONObject().put("UUID", replicatedUUID)));
+                persistenceService.run(Update.entity(Thread_.class)
+                        .data(Map.of(Thread.WORKFLOW_UUID, workflowPresentation.getId()))
+                        .where(existingThread -> existingThread.ID().eq((String) thread.get(Thread.ID))));
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         });
         publishContext.setCompleted();
     }
@@ -101,9 +132,20 @@ public class ThreadHandler implements EventHandler {
     public void withdraw(@NonNull WithdrawContext withdrawContext) {
         List<Thread> threads = persistenceService.run(withdrawContext.getCqn()).listOf(Thread.class);
         threads.stream().parallel().forEach(thread -> {
+            if (thread.getStatus().equals("Published")) {
+                withdrawContext.getMessages().warn("Entity already was processed. Withdrawn is not possible for thread " + thread.getName());
+                return;
+            }
             RevertContext revertContext = RevertContext.create();
             revertContext.setThreadId(thread.getId());
             threadReplicationService.emit(revertContext);
+            try {
+                if (workflowOperator.terminateWorkflow(thread.getWorkflowUUID())) {
+                    log.atWarn().log("can not stop workflow with id " + thread.getWorkflowUUID());
+                }
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             persistenceService.run(Update.entity(Thread_.CDS_NAME).data(Thread.STATUS, "Initial").where(conditionThread -> conditionThread.get(Thread.ID).eq(thread.getId())));
         });
         withdrawContext.setCompleted();

@@ -12,7 +12,7 @@ import com.sap.cds.services.handler.annotations.*;
 import com.yk.gen.threadservice.Attachment;
 import com.yk.gen.threadservice.Attachment_;
 import com.yk.gen.threadservice.ThreadService_;
-import com.yk.nap.service.AttachmentDriveOperator;
+import com.yk.nap.service.attachment.AttachmentDriveOperator;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 import org.apache.tika.mime.MimeTypeException;

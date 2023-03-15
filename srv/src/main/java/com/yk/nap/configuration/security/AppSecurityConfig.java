@@ -1,4 +1,4 @@
-package com.yk.nap.configuration;
+package com.yk.nap.configuration.security;
 
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;

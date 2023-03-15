@@ -1,6 +1,7 @@
-package com.yk.nap.configuration;
+package com.yk.nap.configuration.security;
 
 import com.google.gson.Gson;
+import com.yk.nap.configuration.ParameterHolder;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.context.annotation.Primary;
