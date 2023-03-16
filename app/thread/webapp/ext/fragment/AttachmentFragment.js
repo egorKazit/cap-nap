@@ -48,7 +48,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/m/MessageToast"], function (Co
         onUploadCompleted: function (oEvent) {
             const oUploadSet = this.byId("uploadSet");
             oUploadSet.removeAllIncompleteItems();
-            oUploadSet.getBinding("items").refresh();
+            this.getBindingContext().getBinding("items").refresh()
         },
 
         onOpenPressed: function (oEvent) {
@@ -66,7 +66,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/m/MessageToast"], function (Co
             oEvent.preventDefault();
             const item = oEvent.getParameter("item");
             const contentUrl = item.getUrl();
-            const deleteRequest = {url: contentUrl.slice(0, contentUrl.lastIndexOf("/")), method: "DELETE"};
+            const deleteRequest = {url: contentUrl.slice(0, contentUrl.lastIndexOf("/")).replace("IsActiveEntity=true","IsActiveEntity=false"), method: "DELETE"};
             const oUploadSet = this.byId("uploadSet");
 
             // @ts-ignore

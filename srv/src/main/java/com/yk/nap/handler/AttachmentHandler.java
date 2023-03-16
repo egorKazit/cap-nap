@@ -10,9 +10,8 @@ import com.sap.cds.services.draft.DraftPatchEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.*;
-import com.yk.gen.threadservice.Attachment;
-import com.yk.gen.threadservice.Attachment_;
-import com.yk.gen.threadservice.ThreadService_;
+import com.yk.gen.threadservice.*;
+import com.yk.gen.threadservice.Thread;
 import com.yk.nap.service.attachment.AttachmentDriveOperator;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
@@ -24,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -69,8 +69,8 @@ public class AttachmentHandler implements EventHandler {
         });
     }
 
-    @On(entity = Attachment_.CDS_NAME, event = DraftService.EVENT_DRAFT_PATCH)
-    public Attachment onAttachmentsUpload(DraftPatchEventContext context, @NonNull Attachment attachment) {
+    @Before(entity = Attachment_.CDS_NAME, event = DraftService.EVENT_DRAFT_PATCH)
+    public void onAttachmentsUpload(DraftPatchEventContext context, @NonNull Attachment attachment) {
         Attachment attachmentToProcess = draftService.run(Select.from(context.getCqn().asUpdate().ref())).single(Attachment.class);
         InputStream inputStream = attachment.getContent();
         if (inputStream != null) {
@@ -83,13 +83,34 @@ public class AttachmentHandler implements EventHandler {
             }
             attachment.setContent(null);
         }
-        if (attachment.getFileName() != null) {
-            attachmentToProcess.setFileName(attachment.getFileName());
-            draftService.run(Update.entity(Attachment_.class).entry(attachmentToProcess));
-        }
-        context.setResult(List.of(attachment));
-        context.setCompleted();
-        return attachment;
+//        return attachment;
+    }
+
+    @Before(entity = Thread_.CDS_NAME, event = DraftService.EVENT_DRAFT_SAVE)
+    public void eraseAttachment(@NonNull DraftActivateContext eventContext) {
+
+        List<Thread> threads = draftService.run(Select.from(eventContext.getCqn().ref()).columns(Thread.ID)).listOf(Thread.class);
+        var activeThreadsWithAttachments = draftService.run(Select.from(Thread_.class).columns(Thread_::ID, thread -> thread.attachment().expand())
+                .where(thread -> thread.ID().in(threads.stream().map(Thread::getId).collect(Collectors.toList())).and(thread.IsActiveEntity().eq(true)))).listOf(Thread.class);
+        var draftThreadsWithAttachments = draftService.run(Select.from(Thread_.class).columns(Thread_::ID, thread -> thread.attachment().expand())
+                .where(thread -> thread.ID().in(threads.stream().map(Thread::getId).collect(Collectors.toList())).and(thread.IsActiveEntity().eq(false)))).listOf(Thread.class);
+        draftThreadsWithAttachments.forEach(draftThreadWithAttachments -> {
+            var activeThreadsWithAttachmentsOptional = activeThreadsWithAttachments.stream().filter(thread -> thread.getId().equals(draftThreadWithAttachments.getId())).findFirst();
+            if (activeThreadsWithAttachmentsOptional.isEmpty())
+                return;
+            var activeThreadWithAttachments = activeThreadsWithAttachmentsOptional.get();
+            activeThreadWithAttachments.getAttachment().parallelStream().forEach(activeAttachment -> {
+                if (draftThreadWithAttachments.getAttachment().stream().noneMatch(draftAttachment -> draftAttachment.getId().equals(activeAttachment.getId()))) {
+                    try {
+                        attachmentDriveOperator.delete(activeAttachment);
+                    } catch (IOException ioException) {
+                        log.atError().log("Error at removing: " + ioException.getMessage());
+                        throw new ServiceException("Can not delete file " + activeAttachment.getFileName());
+                    }
+                }
+            });
+        });
+
     }
 
     @After(event = DraftService.EVENT_READ, entity = Attachment_.CDS_NAME)
@@ -114,17 +135,16 @@ public class AttachmentHandler implements EventHandler {
         context.setResult(List.of(attachment));
     }
 
-    @Before(entity = Attachment_.CDS_NAME, event = DraftService.EVENT_DELETE)
-    public void eraseAttachment(@NonNull CdsDeleteEventContext eventContext) {
-
-        List<Attachment> attachments = draftService.run(Select.from(eventContext.getCqn().asDelete().ref())).listOf(Attachment.class);
-        attachments.forEach(attachment -> {
-            try {
-                attachmentDriveOperator.delete(attachment);
-            } catch (IOException ioException) {
-                log.atError().log("Error at removing: " + ioException.getMessage());
-                throw new ServiceException("Can not delete file " + attachment.getFileName());
-            }
+    @After(entity = Thread_.CDS_NAME, event = {DraftService.EVENT_CREATE, DraftService.EVENT_UPDATE})
+    public void updateAttachment(@NonNull List<Thread> threads) {
+        threads.stream().parallel().forEach(thread -> {
+            var attachments = thread.getAttachment();
+            if (attachments == null) return;
+            attachments.forEach(attachment -> attachment.setUrl("/odata/v4/ThreadService/Attachment(ID=" + attachment.getId() + ",IsActiveEntity=" + attachment.getIsActiveEntity() + ")/content"));
+            if (attachments.isEmpty()) return;
+            draftService.run(Update.entity(Attachment_.class).entries(attachments));
         });
+
     }
+
 }
