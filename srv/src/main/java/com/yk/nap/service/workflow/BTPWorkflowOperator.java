@@ -1,10 +1,10 @@
 package com.yk.nap.service.workflow;
 
 import com.google.gson.Gson;
-import com.yk.nap.utils.HttpOAuthTokenKey;
 import com.yk.nap.configuration.ParameterHolder;
-import com.yk.nap.utils.ExtensibleTokenKeeper;
 import com.yk.nap.service.oauth.OAuthToken;
+import com.yk.nap.utils.ExtensibleTokenKeeper;
+import com.yk.nap.utils.HttpOAuthTokenKey;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
@@ -34,7 +34,7 @@ public class BTPWorkflowOperator extends ExtensibleTokenKeeper implements Workfl
     public WorkflowPresentation startWorkflow(String workflowId, JSONObject context) throws IOException, InterruptedException {
 
         HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(parameterHolder.getWorkflowUrl() + "/v1/workflow-instances"))
-                .header("Authorization", token)
+                .header("Authorization", getToken())
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(new JSONObject().put("definitionId", workflowId).put("context", context).toString())).build();
         HttpResponse<String> httpResponse = HttpClient.newHttpClient().send(httpRequest, HttpResponse.BodyHandlers.ofString());
@@ -46,7 +46,7 @@ public class BTPWorkflowOperator extends ExtensibleTokenKeeper implements Workfl
     public boolean terminateWorkflow(String instanceId) throws IOException, InterruptedException {
 
         HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(parameterHolder.getWorkflowUrl() + "/v1/workflow-instances/" + instanceId))
-                .header("Authorization", token)
+                .header("Authorization", getToken())
                 .header("Content-Type", "application/json")
                 .method("PATCH", HttpRequest.BodyPublishers.ofString(new JSONObject()
                         .put("status", "CANCELED")
