@@ -50,13 +50,14 @@ public class DestinationFactory {
         private final String credentials;
 
 
-        private DefaultHttpDestinationBuilderWithToken(@NonNull OAuthToken oAuthToken, @NonNull DestinationHolder.Destination destination) {
+        private DefaultHttpDestinationBuilderWithToken(@NonNull OAuthToken oAuthToken, @NonNull DestinationHolder.Destination destination) throws IOException {
             super(oAuthToken);
+            this.credentials = destination.destination.credentials;
             this.builder = DefaultHttpDestination
                     .builder(destination.destination.uri)
                     .authenticationType(AuthenticationType.NO_AUTHENTICATION)
+                    .header("Authorization", getToken())
                     .name(destination.destination.name);
-            this.credentials = destination.destination.credentials;
         }
 
         @Override
@@ -64,10 +65,6 @@ public class DestinationFactory {
             return new Gson().fromJson(String.join("", Files.readAllLines(Path.of(credentials))), HttpOAuthTokenKey.class);
         }
 
-        @Override
-        protected void enrichIfNeeded() {
-            builder.header("Authorization", token);
-        }
     }
 
 }

@@ -29,7 +29,7 @@ public class OAuthTokenClient implements OAuthToken {
 
     @Override
     public String fetch(HttpOAuthTokenKey httpOAuthTokenKey) throws TokenFlowException {
-        if (oAuth2TokenResponse != null && oAuth2TokenResponse.getExpiredAt().isBefore(Instant.now())) {
+        if (oAuth2TokenResponse != null && oAuth2TokenResponse.getExpiredAt().isAfter(Instant.now())) {
             return StringUtils.capitalize(oAuth2TokenResponse.getTokenType() + " " + oAuth2TokenResponse.getAccessToken());
         }
         OAuth2ServiceConfiguration oAuth2ServiceConfiguration = getConfig(httpOAuthTokenKey);

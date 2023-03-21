@@ -23,6 +23,7 @@ import com.yk.gen.threadservice.*;
 import com.yk.nap.service.workflow.WorkflowOperator;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -105,7 +106,7 @@ public class ThreadHandler implements EventHandler {
 
     @On(entity = Thread_.CDS_NAME, event = PublishContext.CDS_NAME)
     public void publish(@NonNull PublishContext publishContext) {
-        List<Row> threads = draftService.run(publishContext.getCqn()).list();
+        List<Thread> threads = draftService.run(publishContext.getCqn()).listOf(Thread.class);
         if (threads == null || threads.isEmpty()) throw new ServiceException("Can not process empty thread list");
         threads.stream().parallel().forEach(thread -> {
             ProcessContext processContext = ProcessContext.create();
@@ -114,10 +115,24 @@ public class ThreadHandler implements EventHandler {
             var replicatedUUID = processContext.getResult();
             draftService.run(Update.entity(Thread_.class)
                     .data(Map.of(Thread.STATUS, "Publishing", Thread.REPLICATED_UUID, replicatedUUID))
-                    .where(existingThread -> existingThread.ID().eq((String) thread.get(Thread.ID))));
+                    .where(existingThread -> existingThread.ID().eq(thread.getId())));
             try {
+                JSONArray items = new JSONArray();
+                List<Note> notes = draftService.run(Select.from(Note_.class).where(note -> note.thread_ID().eq(thread.getId()))).listOf(Note.class);
+                notes.forEach(note -> items.put(new JSONObject()
+                        .put("Name", "Note " + note.getNote())
+                        .put("Url", note.getText())));
+                List<Attachment> attachments = draftService.run(Select.from(Attachment_.class).where(note -> note.thread_ID().eq(thread.getId()))).listOf(Attachment.class);
+                attachments.forEach(attachment -> items.put(new JSONObject()
+                        .put("Name", "Attachment: " + attachment.getFileName())
+                        .put("Url", attachment.getUrl())));
                 WorkflowOperator.WorkflowPresentation workflowPresentation = workflowOperator
-                        .startWorkflow("cap.rap.wf.caprapworkflow", new JSONObject().put("thread", new JSONObject().put("UUID", replicatedUUID)));
+                        .startWorkflow("cap.rap.wf.caprapworkflow",
+                                new JSONObject()
+                                        .put("thread", new JSONObject()
+                                                .put("UUID", replicatedUUID)
+                                                .put("Name", thread.getName())
+                                                .put("Items",items)));
                 draftService.run(Update.entity(Thread_.class)
                         .data(Map.of(Thread.WORKFLOW_UUID, workflowPresentation.getId()))
                         .where(existingThread -> existingThread.ID().eq((String) thread.get(Thread.ID))));
