@@ -2,6 +2,7 @@ package com.yk.nap.handler;
 
 import com.sap.cds.Row;
 import com.sap.cds.ql.CQL;
+import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.EventContext;
@@ -10,7 +11,10 @@ import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsDeleteEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
-import com.sap.cds.services.handler.annotations.*;
+import com.sap.cds.services.handler.annotations.Before;
+import com.sap.cds.services.handler.annotations.HandlerOrder;
+import com.sap.cds.services.handler.annotations.On;
+import com.sap.cds.services.handler.annotations.ServiceName;
 import com.yk.gen.threadreplicationservice.ProcessContext;
 import com.yk.gen.threadreplicationservice.RevertContext;
 import com.yk.gen.threadreplicationservice.ThreadReplicationService_;
@@ -28,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Service
 @ServiceName(ThreadService_.CDS_NAME)
@@ -62,7 +67,7 @@ public class ThreadHandler implements EventHandler {
     }
 
     @Before(entity = Thread_.CDS_NAME, event = DraftService.EVENT_DELETE)
-    public void validateEntriesBeforeDelete(CdsDeleteEventContext eventContext) {
+    public void validateEntriesBeforeDelete(@NonNull CdsDeleteEventContext eventContext) {
         var threadsToDelete = draftService.run(Select.from(eventContext.getCqn().ref())).listOf(Thread.class);
         threadsToDelete.forEach(thread -> {
             if (thread.getStatus().equals("Published")) {
@@ -71,16 +76,31 @@ public class ThreadHandler implements EventHandler {
         });
     }
 
-    @After(entity = Thread_.CDS_NAME, event = {DraftService.EVENT_CREATE, DraftService.EVENT_UPDATE})
-    public void setNoteSemanticId(@NonNull List<Thread> threads) {
-        threads.stream().parallel().forEach(thread -> {
-            AtomicInteger atomicInteger = new AtomicInteger();
-            var notes = draftService.run(Select.from(Note_.class).columns(Note_::ID, Note_::createdAt).where(note -> note.thread_ID().eq(thread.getId())).orderBy(note -> note.createdAt().asc())).listOf(Note.class);
-            notes.forEach(note -> note.setNote(String.valueOf(atomicInteger.incrementAndGet())));
-            if (notes.isEmpty()) return;
-            draftService.run(Update.entity(Note_.class).entries(notes));
-        });
-
+    @On(entity = Thread_.CDS_NAME, event = CopyContext.CDS_NAME)
+    public void copy(@NonNull CopyContext copyContext) {
+        var sourceThread = draftService.run(copyContext.getCqn()).single(Thread.class);
+        var sourceAttachments = draftService.run(Select.from(Attachment_.class).where(attachment -> attachment.get(Attachment.THREAD_ID).eq(sourceThread.getId()))).listOf(Attachment.class);
+        var sourceNotes = draftService.run(Select.from(Note_.class).where(note -> note.get(Attachment.THREAD_ID).eq(sourceThread.getId()))).listOf(Note.class);
+        var targetThread = Thread.create();
+        targetThread.setName(sourceThread.getName() + " - copy");
+        targetThread.setAttachment(sourceAttachments.stream().map(attachment -> {
+            var targetAttachment = Attachment.create();
+            targetAttachment.setFileName(attachment.getFileName());
+            targetAttachment.setUrl(attachment.getUrl());
+            targetAttachment.setSize(attachment.getSize());
+            targetAttachment.setMediaType(attachment.getMediaType());
+            targetAttachment.setThreadId(attachment.getThreadId());
+            return targetAttachment;
+        }).collect(Collectors.toList()));
+        targetThread.setNote(sourceNotes.stream().map(note -> {
+            var targetNote = Note.create();
+            targetNote.setNote(note.getNote());
+            targetNote.setText(note.getText());
+            return targetNote;
+        }).collect(Collectors.toList()));
+        var targetDraftThread = draftService.newDraft(Insert.into(Thread_.CDS_NAME).entry(targetThread)).single(Thread.class);
+        copyContext.setResult(targetDraftThread);
+        copyContext.setCompleted();
     }
 
     @On(entity = Thread_.CDS_NAME, event = PublishContext.CDS_NAME)

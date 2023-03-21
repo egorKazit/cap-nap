@@ -4,14 +4,16 @@ import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnReference;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.cds.CdsDeleteEventContext;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.draft.DraftPatchEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
-import com.sap.cds.services.handler.annotations.*;
-import com.yk.gen.threadservice.*;
+import com.sap.cds.services.handler.annotations.After;
+import com.sap.cds.services.handler.annotations.Before;
+import com.sap.cds.services.handler.annotations.HandlerOrder;
+import com.sap.cds.services.handler.annotations.ServiceName;
 import com.yk.gen.threadservice.Thread;
+import com.yk.gen.threadservice.*;
 import com.yk.nap.service.attachment.AttachmentDriveOperator;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
@@ -70,7 +72,7 @@ public class AttachmentHandler implements EventHandler {
     }
 
     @Before(entity = Attachment_.CDS_NAME, event = DraftService.EVENT_DRAFT_PATCH)
-    public void onAttachmentsUpload(DraftPatchEventContext context, @NonNull Attachment attachment) {
+    public void onAttachmentsUpload(@NonNull DraftPatchEventContext context, @NonNull Attachment attachment) {
         Attachment attachmentToProcess = draftService.run(Select.from(context.getCqn().asUpdate().ref())).single(Attachment.class);
         InputStream inputStream = attachment.getContent();
         if (inputStream != null) {
@@ -83,7 +85,6 @@ public class AttachmentHandler implements EventHandler {
             }
             attachment.setContent(null);
         }
-//        return attachment;
     }
 
     @Before(entity = Thread_.CDS_NAME, event = DraftService.EVENT_DRAFT_SAVE)

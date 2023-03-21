@@ -5,6 +5,9 @@ service ThreadService  {
     entity Thread     as projection on db.Thread order by
         thread desc
     actions {
+
+        action copy() returns Thread;
+
         @(
             cds.odata.bindingparameter.name: '_it',
             Common.SideEffects             : {TargetProperties: ['_it/status']}

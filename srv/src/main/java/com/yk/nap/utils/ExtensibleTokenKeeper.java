@@ -1,7 +1,6 @@
 package com.yk.nap.utils;
 
 import com.yk.nap.service.oauth.OAuthToken;
-import com.yk.nap.utils.HttpOAuthTokenKey;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;

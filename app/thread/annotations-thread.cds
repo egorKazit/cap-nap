@@ -112,6 +112,11 @@ annotate ThreadService.Thread with @UI: {
     Identification                                 : [
         {
             $Type        : 'UI.DataFieldForAction',
+            Label        : 'Copy',
+            Action       : 'ThreadService.copy'
+        },
+        {
+            $Type        : 'UI.DataFieldForAction',
             Label        : 'Publish',
             Action       : 'ThreadService.publish',
             ![@UI.Hidden]: {$edmJson: {$Or: [
