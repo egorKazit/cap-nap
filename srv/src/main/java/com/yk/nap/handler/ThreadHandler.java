@@ -55,9 +55,11 @@ public class ThreadHandler implements EventHandler {
     @Before(entity = Thread_.CDS_NAME, event = DraftService.EVENT_CREATE)
     @HandlerOrder(0)
     public void checkName(@NonNull List<Thread> threads, EventContext eventContext) {
-        Optional<Row> alreadyExistingName = draftService.run(Select.from(Thread_.class).columns(CQL.get(Thread.THREAD), CQL.get(Thread.NAME)).where(persistedThread -> persistedThread.get(Thread.NAME).in(threads.stream().map(Thread::getName).toArray()))).first();
+        Optional<Thread> alreadyExistingName = draftService.run(Select.from(Thread_.class)
+                .columns(Thread_::thread, Thread_::name).where(persistedThread -> persistedThread.name()
+                        .in(threads.stream().map(Thread::getName).toArray(String[]::new)))).first(Thread.class);
         if (alreadyExistingName.isPresent())
-            throw new ServiceException("Name " + alreadyExistingName.get().get(Thread.NAME) + " already used in thread " + alreadyExistingName.get().get(Thread.THREAD));
+            throw new ServiceException("Name " + alreadyExistingName.get().getName() + " already used in thread " + alreadyExistingName.get().getThread());
     }
 
     @Before(entity = Thread_.CDS_NAME, event = DraftService.EVENT_CREATE)
@@ -99,7 +101,7 @@ public class ThreadHandler implements EventHandler {
             targetNote.setText(note.getText());
             return targetNote;
         }).collect(Collectors.toList()));
-        var targetDraftThread = draftService.newDraft(Insert.into(Thread_.CDS_NAME).entry(targetThread)).single(Thread.class);
+        var targetDraftThread = draftService.newDraft(Insert.into(Thread_.class).entry(targetThread)).single(Thread.class);
         copyContext.setResult(targetDraftThread);
         copyContext.setCompleted();
     }
@@ -110,7 +112,7 @@ public class ThreadHandler implements EventHandler {
         if (threads == null || threads.isEmpty()) throw new ServiceException("Can not process empty thread list");
         threads.stream().parallel().forEach(thread -> {
             ProcessContext processContext = ProcessContext.create();
-            processContext.setThreadId(thread.get(Thread.ID).toString());
+            processContext.setThreadId(thread.getId());
             threadReplicationService.emit(processContext);
             var replicatedUUID = processContext.getResult();
             draftService.run(Update.entity(Thread_.class)
@@ -132,10 +134,10 @@ public class ThreadHandler implements EventHandler {
                                         .put("thread", new JSONObject()
                                                 .put("UUID", replicatedUUID)
                                                 .put("Name", thread.getName())
-                                                .put("Items",items)));
+                                                .put("Items", items)));
                 draftService.run(Update.entity(Thread_.class)
                         .data(Map.of(Thread.WORKFLOW_UUID, workflowPresentation.getId()))
-                        .where(existingThread -> existingThread.ID().eq((String) thread.get(Thread.ID))));
+                        .where(existingThread -> existingThread.ID().eq(thread.getId())));
             } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -146,7 +148,8 @@ public class ThreadHandler implements EventHandler {
     @On(entity = Thread_.CDS_NAME, event = PromoteStatusContext.CDS_NAME)
     public void promoteStatus(@NonNull PromoteStatusContext promoteStatusContext) {
         Thread thread = draftService.run(promoteStatusContext.getCqn()).single(Thread.class);
-        draftService.run(Update.entity(Thread_.CDS_NAME).data(Thread.STATUS, promoteStatusContext.getStatus()).where(conditionThread -> conditionThread.get(Thread.ID).eq(thread.getId())));
+        draftService.run(Update.entity(Thread_.class).data(Thread.STATUS, promoteStatusContext.getStatus())
+                .where(conditionThread -> conditionThread.ID().eq(thread.getId())));
         promoteStatusContext.setCompleted();
     }
 
@@ -154,7 +157,7 @@ public class ThreadHandler implements EventHandler {
     public void withdraw(@NonNull WithdrawContext withdrawContext) {
         List<Thread> threads = draftService.run(withdrawContext.getCqn()).listOf(Thread.class);
         threads.stream().parallel().forEach(thread -> {
-            if (thread.getStatus().equals("Published")) {
+            if (thread.getStatus().equals("Published") || thread.getStatus().equals("Initial")) {
                 withdrawContext.getMessages().warn("Entity already was processed. Withdrawn is not possible for thread " + thread.getName());
                 return;
             }
@@ -168,7 +171,8 @@ public class ThreadHandler implements EventHandler {
             } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            draftService.run(Update.entity(Thread_.CDS_NAME).data(Thread.STATUS, "Initial").where(conditionThread -> conditionThread.get(Thread.ID).eq(thread.getId())));
+            draftService.run(Update.entity(Thread_.class).data(Thread.STATUS, "Initial")
+                    .where(conditionThread -> conditionThread.ID().eq(thread.getId())));
         });
         withdrawContext.setCompleted();
     }
@@ -177,7 +181,8 @@ public class ThreadHandler implements EventHandler {
     public void complete(@NonNull CompleteContext publishContext) {
         List<Thread> threads = draftService.run(publishContext.getCqn()).listOf(Thread.class);
         if (threads == null || threads.isEmpty()) throw new ServiceException("Can not process empty thread list");
-        threads.stream().parallel().forEach(thread -> draftService.run(Update.entity(Thread_.class).data(Thread.STATUS, "Completed").where(existingThread -> existingThread.ID().eq((String) thread.get(Thread.ID)))));
+        threads.stream().parallel().forEach(thread -> draftService
+                .run(Update.entity(Thread_.class).data(Thread.STATUS, "Completed").where(existingThread -> existingThread.ID().eq(thread.getId()))));
         publishContext.setCompleted();
     }
 
@@ -186,11 +191,12 @@ public class ThreadHandler implements EventHandler {
             return;
         }
         threadId = new AtomicInteger();
-        List<Row> selectResult = draftService.run(Select.from(Thread_.class).columns(CQL.max(CQL.get(Thread.THREAD)).as(Thread.ID))).list();
+        List<Thread> selectResult = draftService.run(Select.from(Thread_.class)
+                .columns(CQL.max(CQL.get(Thread.THREAD)).as(Thread.ID))).listOf(Thread.class);
         if (selectResult.isEmpty()) threadId.set(0);
         else {
 
-            threadId.set(selectResult.get(0).get(Thread.ID) != null ? Integer.parseInt((String) selectResult.get(0).get(Thread.ID)) : 0);
+            threadId.set(selectResult.get(0).getId() != null ? Integer.parseInt(selectResult.get(0).getId()) : 0);
         }
     }
 

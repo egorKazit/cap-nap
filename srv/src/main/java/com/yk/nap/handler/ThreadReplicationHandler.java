@@ -43,8 +43,8 @@ public class ThreadReplicationHandler implements EventHandler {
     public void process(@NonNull ProcessContext processContext) {
         var sourceEntry = threadReplicationService.run(Select.from(Thread_.class)
                 .columns(Thread_::ID, Thread_::thread, Thread_::name, thread -> thread.note().expand(), thread -> thread.attachment().expand())
-                .where(thread -> thread.get(Thread.ID).eq(processContext.getThreadId()))).first(Thread.class).orElseThrow(() -> new ServiceException("Error on read"));
-        var createEntityFromSourceContext = CreateEntityFromSourceContext.create(ZYKZAThreadHeader_.CDS_NAME);
+                .where(thread -> thread.ID().eq(processContext.getThreadId()))).first(Thread.class).orElseThrow(() -> new ServiceException("Error on read"));
+        var createEntityFromSourceContext = CreateEntityFromSourceContext.create();
 
         createEntityFromSourceContext.setSourceUUID(sourceEntry.getId());
         createEntityFromSourceContext.setThread(sourceEntry.getThread());
@@ -66,7 +66,7 @@ public class ThreadReplicationHandler implements EventHandler {
         })).toList();
 
         createEntityFromSourceContext.setItems(items);
-        createEntityFromSourceContext.setCqn(Select.from(ZYKZAThreadHeader_.CDS_NAME));
+        createEntityFromSourceContext.setCqn(Select.from(ZYKZAThreadHeader_.class));
         externalServiceOperator.emit(createEntityFromSourceContext);
         processContext.setResult(createEntityFromSourceContext.getResult().getUuid());
 
