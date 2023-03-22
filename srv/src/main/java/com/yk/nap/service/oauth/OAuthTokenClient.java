@@ -29,9 +29,6 @@ public class OAuthTokenClient implements OAuthToken {
 
     @Override
     public String fetch(HttpOAuthTokenKey httpOAuthTokenKey) throws TokenFlowException {
-        if (oAuth2TokenResponse != null && oAuth2TokenResponse.getExpiredAt().isAfter(Instant.now())) {
-            return StringUtils.capitalize(oAuth2TokenResponse.getTokenType() + " " + oAuth2TokenResponse.getAccessToken());
-        }
         OAuth2ServiceConfiguration oAuth2ServiceConfiguration = getConfig(httpOAuthTokenKey);
         OAuth2TokenService oAuth2TokenService = new DefaultOAuth2TokenService(HttpClientFactory.create(oAuth2ServiceConfiguration.getClientIdentity()));
         var passwordTokenFlowBuilder = new XsuaaTokenFlows(
