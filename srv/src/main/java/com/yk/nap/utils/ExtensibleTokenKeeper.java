@@ -13,7 +13,6 @@ public abstract class ExtensibleTokenKeeper {
         this.oAuthToken = oAuthToken;
     }
 
-    @PostConstruct
     protected String getToken() throws IOException {
         HttpOAuthTokenKey httpOAuthTokenKey = getHttpOAuthTokenKey();
         return oAuthToken.fetch(httpOAuthTokenKey);

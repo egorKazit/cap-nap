@@ -14,6 +14,7 @@ import com.yk.gen.threadservice.PromoteStatusContext;
 import com.yk.gen.threadservice.Thread;
 import com.yk.gen.threadservice.ThreadService_;
 import com.yk.gen.threadservice.Thread_;
+import com.yk.nap.configuration.ParameterHolder;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
@@ -31,12 +32,14 @@ public class ThreadReplicationHandler implements EventHandler {
 
     private final ApplicationService threadReplicationService;
     private final CqnService externalServiceOperator;
+    private final ParameterHolder parameterHolder;
 
     @SuppressWarnings("all")
     public ThreadReplicationHandler(@Qualifier(ThreadService_.CDS_NAME) ApplicationService threadReplicationService,
-                                    @Qualifier(V0001_.CDS_NAME) CqnService externalServiceOperator) {
+                                    @Qualifier(V0001_.CDS_NAME) CqnService externalServiceOperator, ParameterHolder parameterHolder) {
         this.threadReplicationService = threadReplicationService;
         this.externalServiceOperator = externalServiceOperator;
+        this.parameterHolder = parameterHolder;
     }
 
     @On(event = ProcessContext.CDS_NAME)
@@ -86,7 +89,10 @@ public class ThreadReplicationHandler implements EventHandler {
     }
 
     @Scheduled(fixedDelay = 1000)
-    public void checkReplications() {
+    public void processReplications() {
+
+        if(!parameterHolder.isWorkflowEnabled())
+            return;
 
         var replicatedEntries = externalServiceOperator
                 .run(Select.from(ZYKZAThreadHeader_.class).where(zykzaThreadHeader -> zykzaThreadHeader.Status().eq("2")

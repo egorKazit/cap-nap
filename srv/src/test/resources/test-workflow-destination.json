@@ -1,0 +1,14 @@
+{
+  "url": "http://localhost:8082",
+  "username": "username",
+  "password": "password",
+  "uaa": {
+    "clientid": "clientId",
+    "credential-type": "instance-secret",
+    "clientsecret": "clientsecret",
+    "certurl": "localhost:8082",
+    "certificate": "",
+    "key": "key",
+    "tenantid": "tenantid"
+  }
+}

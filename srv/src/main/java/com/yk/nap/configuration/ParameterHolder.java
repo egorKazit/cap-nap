@@ -27,6 +27,10 @@ public class ParameterHolder {
     @Getter
     private String credentialsFile;
 
+    @Value("${workflow.enabled}")
+    @Getter
+    private boolean workflowEnabled;
+
     @Value("${workflow.credentials}")
     @Getter
     private String workflowCredentials;

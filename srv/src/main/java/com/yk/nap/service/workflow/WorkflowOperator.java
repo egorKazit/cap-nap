@@ -12,10 +12,9 @@ public interface WorkflowOperator {
 
     boolean terminateWorkflow(String instanceId) throws IOException, InterruptedException;
 
-    @AllArgsConstructor
     @Getter
     class WorkflowPresentation{
-        private final String id;
+        private String id;
     }
 
 }

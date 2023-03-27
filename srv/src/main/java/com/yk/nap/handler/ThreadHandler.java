@@ -1,10 +1,6 @@
 package com.yk.nap.handler;
 
-import com.sap.cds.Row;
-import com.sap.cds.ql.CQL;
-import com.sap.cds.ql.Insert;
-import com.sap.cds.ql.Select;
-import com.sap.cds.ql.Update;
+import com.sap.cds.ql.*;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.ApplicationService;
@@ -15,11 +11,13 @@ import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
+import com.sap.cds.services.persistence.PersistenceService;
 import com.yk.gen.threadreplicationservice.ProcessContext;
 import com.yk.gen.threadreplicationservice.RevertContext;
 import com.yk.gen.threadreplicationservice.ThreadReplicationService_;
 import com.yk.gen.threadservice.Thread;
 import com.yk.gen.threadservice.*;
+import com.yk.nap.configuration.ParameterHolder;
 import com.yk.nap.service.workflow.WorkflowOperator;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
@@ -41,15 +39,19 @@ import java.util.stream.Collectors;
 public class ThreadHandler implements EventHandler {
 
     private final DraftService draftService;
+    private final PersistenceService persistenceService;
     private final ApplicationService threadReplicationService;
     private final WorkflowOperator workflowOperator;
+    private final ParameterHolder parameterHolder;
     private AtomicInteger threadId;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    public ThreadHandler(DraftService draftService, @Qualifier(ThreadReplicationService_.CDS_NAME) ApplicationService threadReplicationService, WorkflowOperator workflowOperator) {
+    public ThreadHandler(DraftService draftService, PersistenceService persistenceService, @Qualifier(ThreadReplicationService_.CDS_NAME) ApplicationService threadReplicationService, WorkflowOperator workflowOperator, ParameterHolder parameterHolder) {
         this.draftService = draftService;
+        this.persistenceService = persistenceService;
         this.threadReplicationService = threadReplicationService;
         this.workflowOperator = workflowOperator;
+        this.parameterHolder = parameterHolder;
     }
 
     @Before(entity = Thread_.CDS_NAME, event = DraftService.EVENT_CREATE)
@@ -106,6 +108,20 @@ public class ThreadHandler implements EventHandler {
         copyContext.setCompleted();
     }
 
+    @Before(entity = Thread_.CDS_NAME, event = PublishContext.CDS_NAME)
+    public void prePublish(@NonNull PublishContext publishContext) {
+        List<Thread> threads = persistenceService.run(Select.copy(publishContext.getCqn().asSelect())
+                .columns(structuredType -> structuredType.get(Thread.ID),
+                        structuredType -> structuredType.get(Thread.NAME),
+                        StructuredType::expand)).listOf(Thread.class);
+        threads.forEach(thread -> {
+            int itemCount = thread.getAttachment().size() + thread.getNote().size();
+            if (itemCount <= 0) {
+                throw new ServiceException(String.format("Thread %s can not be published with empty items", thread.getName()));
+            }
+        });
+    }
+
     @On(entity = Thread_.CDS_NAME, event = PublishContext.CDS_NAME)
     public void publish(@NonNull PublishContext publishContext) {
         List<Thread> threads = draftService.run(publishContext.getCqn()).listOf(Thread.class);
@@ -118,28 +134,30 @@ public class ThreadHandler implements EventHandler {
             draftService.run(Update.entity(Thread_.class)
                     .data(Map.of(Thread.STATUS, "Publishing", Thread.REPLICATED_UUID, replicatedUUID))
                     .where(existingThread -> existingThread.ID().eq(thread.getId())));
-            try {
-                JSONArray items = new JSONArray();
-                List<Note> notes = draftService.run(Select.from(Note_.class).where(note -> note.thread_ID().eq(thread.getId()))).listOf(Note.class);
-                notes.forEach(note -> items.put(new JSONObject()
-                        .put("Name", "Note " + note.getNote())
-                        .put("Url", note.getText())));
-                List<Attachment> attachments = draftService.run(Select.from(Attachment_.class).where(note -> note.thread_ID().eq(thread.getId()))).listOf(Attachment.class);
-                attachments.forEach(attachment -> items.put(new JSONObject()
-                        .put("Name", "Attachment: " + attachment.getFileName())
-                        .put("Url", attachment.getUrl())));
-                WorkflowOperator.WorkflowPresentation workflowPresentation = workflowOperator
-                        .startWorkflow("cap.rap.wf.caprapworkflow",
-                                new JSONObject()
-                                        .put("thread", new JSONObject()
-                                                .put("UUID", replicatedUUID)
-                                                .put("Name", thread.getName())
-                                                .put("Items", items)));
-                draftService.run(Update.entity(Thread_.class)
-                        .data(Map.of(Thread.WORKFLOW_UUID, workflowPresentation.getId()))
-                        .where(existingThread -> existingThread.ID().eq(thread.getId())));
-            } catch (IOException | InterruptedException e) {
-                throw new RuntimeException(e);
+            if (parameterHolder.isWorkflowEnabled()) {
+                try {
+                    JSONArray items = new JSONArray();
+                    List<Note> notes = draftService.run(Select.from(Note_.class).where(note -> note.thread_ID().eq(thread.getId()))).listOf(Note.class);
+                    notes.forEach(note -> items.put(new JSONObject()
+                            .put("Name", "Note " + note.getNote())
+                            .put("Url", note.getText())));
+                    List<Attachment> attachments = draftService.run(Select.from(Attachment_.class).where(note -> note.thread_ID().eq(thread.getId()))).listOf(Attachment.class);
+                    attachments.forEach(attachment -> items.put(new JSONObject()
+                            .put("Name", "Attachment: " + attachment.getFileName())
+                            .put("Url", attachment.getUrl())));
+                    WorkflowOperator.WorkflowPresentation workflowPresentation = workflowOperator
+                            .startWorkflow("cap.rap.wf.caprapworkflow",
+                                    new JSONObject()
+                                            .put("thread", new JSONObject()
+                                                    .put("UUID", replicatedUUID)
+                                                    .put("Name", thread.getName())
+                                                    .put("Items", items)));
+                    draftService.run(Update.entity(Thread_.class)
+                            .data(Map.of(Thread.WORKFLOW_UUID, workflowPresentation.getId()))
+                            .where(existingThread -> existingThread.ID().eq(thread.getId())));
+                } catch (IOException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
         });
         publishContext.setCompleted();

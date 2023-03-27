@@ -20,7 +20,7 @@ public class AttachmentDriveOperatorFactory {
         } else if ("google".equals(parameterHolder.getDmsType())) {
             return new AttachmentGoogleDriveOperator(parameterHolder);
         }
-        return null;
+        return new AttachmentLocalDriveOperator(parameterHolder);
     }
 
 }

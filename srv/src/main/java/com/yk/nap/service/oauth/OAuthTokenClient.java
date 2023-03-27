@@ -16,7 +16,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.Optional;
 
 @Service
@@ -25,22 +24,22 @@ public class OAuthTokenClient implements OAuthToken {
 
 
     private static final String TENANT_ID = "tenantId";
-    private OAuth2TokenResponse oAuth2TokenResponse;
 
     @Override
     public String fetch(HttpOAuthTokenKey httpOAuthTokenKey) throws TokenFlowException {
         OAuth2ServiceConfiguration oAuth2ServiceConfiguration = getConfig(httpOAuthTokenKey);
         OAuth2TokenService oAuth2TokenService = new DefaultOAuth2TokenService(HttpClientFactory.create(oAuth2ServiceConfiguration.getClientIdentity()));
-        var passwordTokenFlowBuilder = new XsuaaTokenFlows(
+        var xsuaaTokenFlows = new XsuaaTokenFlows(
                 oAuth2TokenService,
                 new XsuaaDefaultEndpoints(oAuth2ServiceConfiguration),
                 oAuth2ServiceConfiguration.getClientIdentity());
+        OAuth2TokenResponse oAuth2TokenResponse;
         if (httpOAuthTokenKey.username != null && httpOAuthTokenKey.password != null) {
-            var passwordTokenFlow = passwordTokenFlowBuilder.passwordTokenFlow();
+            var passwordTokenFlow = xsuaaTokenFlows.passwordTokenFlow();
             passwordTokenFlow.username(httpOAuthTokenKey.username).password(httpOAuthTokenKey.password);
             oAuth2TokenResponse = passwordTokenFlow.execute();
         } else {
-            oAuth2TokenResponse = passwordTokenFlowBuilder.clientCredentialsTokenFlow().execute();
+            oAuth2TokenResponse = xsuaaTokenFlows.clientCredentialsTokenFlow().execute();
         }
 
         return StringUtils.capitalize(oAuth2TokenResponse.getTokenType() + " " + oAuth2TokenResponse.getAccessToken());

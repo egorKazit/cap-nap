@@ -4,14 +4,14 @@ import com.google.gson.annotations.SerializedName;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 public final class HttpOAuthTokenKey {
     public final String url;
     public final String username;
     public final String password;
     public final HttpOAuthTokenKeyUaa uaa;
 
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor(access = AccessLevel.PACKAGE)
     public final static class HttpOAuthTokenKeyUaa {
         @SerializedName("clientid")
         public final String clientId;
