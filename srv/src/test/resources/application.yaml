@@ -1,0 +1,32 @@
+---
+spring:
+  config.activate.on-profile: default
+  web.resources.static-locations: "file:./app"
+  sql:
+    init:
+      mode: never
+  datasource:
+    url: "jdbc:sqlite:sqlite.db"
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+cds:
+  datasource:
+    auto-config.enabled: false
+  security:
+    mock:
+      defaultUsers: false
+
+workflow:
+  enabled: false
+  uri: "http://localhost:8082"
+  credentials: "src/test/resources/test-workflow-destination.json"
+dms:
+  type: local
+  target:
+    folder: /tmp
+    credentials-file: "src/test/resources/test-google-cred-file.json"
+security:
+  credentials-file: "src/test/resources/creds.json"
+server:
+  port: 8082

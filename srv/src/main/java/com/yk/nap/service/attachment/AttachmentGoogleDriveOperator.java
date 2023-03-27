@@ -27,7 +27,6 @@ import java.util.List;
 
 public class AttachmentGoogleDriveOperator implements AttachmentDriveOperator {
 
-
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE);
     private static final String DRIVE_FOLDER = "CapSync";

@@ -12,12 +12,14 @@ import java.io.*;
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 public class AttachmentLocalDriveOperator implements AttachmentDriveOperator {
 
-
     private final ParameterHolder parameterHolder;
 
     @Override
     public String create(@NonNull Attachment attachment) throws IOException {
-        return new File(parameterHolder.getDmsTargetFolder(), "thread-attachment-" + attachment.getId()).getAbsolutePath();
+        File file = new File(parameterHolder.getDmsTargetFolder(), "thread-attachment-" + attachment.getId());
+        if (!file.exists())
+            if (!file.createNewFile()) throw new IOException("Can not create a file. Please check your file systemc!");
+        return file.getAbsolutePath();
     }
 
     @Override

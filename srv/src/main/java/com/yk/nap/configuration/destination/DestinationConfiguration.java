@@ -25,6 +25,8 @@ public class DestinationConfiguration implements EventHandler {
 
     @Before(event = ApplicationLifecycleService.EVENT_APPLICATION_PREPARED)
     public void initializeDestinations() {
+        if (destinationHolder == null || destinationHolder.getServices() == null)
+            return;
         destinationHolder.getServices().forEach(destination -> destinationLoader.registerDestination(destinationFactory.getDestinationByName(destination.name)));
         DestinationAccessor.appendDestinationLoader(destinationLoader);
     }

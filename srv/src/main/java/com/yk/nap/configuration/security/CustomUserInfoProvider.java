@@ -25,7 +25,7 @@ public class CustomUserInfoProvider implements UserInfoProvider {
     public UserInfo get() {
 
         ModifiableUserInfo userInfo = UserInfo.create();
-        if(RequestContextHolder.getRequestAttributes()  == null)
+        if (RequestContextHolder.getRequestAttributes() == null)
             return userInfo;
         try {
             userInfo.setName(userHolder.users.stream().filter(user -> user.username.equals(request.getUserPrincipal().getName()))
@@ -36,7 +36,6 @@ public class CustomUserInfoProvider implements UserInfoProvider {
         return userInfo;
 
     }
-
 
 
 }
