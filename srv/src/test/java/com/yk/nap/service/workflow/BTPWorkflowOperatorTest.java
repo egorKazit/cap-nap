@@ -5,6 +5,7 @@ import com.yk.nap.service.oauth.OAuthToken;
 import lombok.NonNull;
 import org.apache.http.HttpHeaders;
 import org.json.JSONObject;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.Test;
@@ -33,7 +34,6 @@ import static org.mockito.Mockito.*;
 
 @RunWith(SpringRunner.class)
 @ExtendWith(MockitoExtension.class)
-@Ignore
 public class BTPWorkflowOperatorTest {
 
     @InjectMocks
@@ -53,7 +53,7 @@ public class BTPWorkflowOperatorTest {
 
     private Supplier<String> getMethod;
 
-    @BeforeEach
+    @Before
     public void prepare() throws IOException, InterruptedException {
         when(parameterHolder.getWorkflowUrl()).thenReturn("http://localhost:8082");
         when(parameterHolder.getWorkflowCredentials()).thenReturn("src/test/resources/test-workflow-destination.json");
