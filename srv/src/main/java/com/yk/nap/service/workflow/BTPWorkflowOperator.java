@@ -3,12 +3,12 @@ package com.yk.nap.service.workflow;
 import com.google.api.client.http.HttpMethods;
 import com.google.gson.Gson;
 import com.yk.nap.configuration.ParameterHolder;
-import com.yk.nap.service.oauth.OAuthToken;
 import com.yk.nap.utils.ExtensibleTokenKeeper;
 import com.yk.nap.utils.HttpOAuthTokenKey;
 import org.apache.http.HttpHeaders;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -35,8 +35,8 @@ public class BTPWorkflowOperator extends ExtensibleTokenKeeper implements Workfl
 
     private final ParameterHolder parameterHolder;
 
-    protected BTPWorkflowOperator(OAuthToken oAuthToken, ParameterHolder parameterHolder) {
-        super(oAuthToken);
+    protected BTPWorkflowOperator(ApplicationContext applicationContext, ParameterHolder parameterHolder) {
+        super(applicationContext);
         this.parameterHolder = parameterHolder;
     }
 

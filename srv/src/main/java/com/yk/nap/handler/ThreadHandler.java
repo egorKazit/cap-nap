@@ -30,6 +30,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -158,6 +161,17 @@ public class ThreadHandler implements EventHandler {
                 } catch (IOException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
+            } else {
+                Executors.newSingleThreadExecutor().submit(() -> {
+                    try {
+                        java.lang.Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        log.atError().log("Error !!!!!!!!!!!!!!1");
+                    }
+                    draftService.run(Update.entity(Thread_.class)
+                            .data(Map.of(Thread.STATUS, "Published", Thread.REPLICATED_UUID, replicatedUUID))
+                            .where(existingThread -> existingThread.ID().eq(thread.getId())));
+                });
             }
         });
         publishContext.setCompleted();
@@ -182,6 +196,8 @@ public class ThreadHandler implements EventHandler {
             RevertContext revertContext = RevertContext.create();
             revertContext.setThreadId(thread.getId());
             threadReplicationService.emit(revertContext);
+            if (!parameterHolder.isWorkflowEnabled())
+                return;
             try {
                 if (workflowOperator.terminateWorkflow(thread.getWorkflowUUID())) {
                     log.atWarn().log("can not stop workflow with id " + thread.getWorkflowUUID());
@@ -192,6 +208,7 @@ public class ThreadHandler implements EventHandler {
             draftService.run(Update.entity(Thread_.class).data(Thread.STATUS, "Initial")
                     .where(conditionThread -> conditionThread.ID().eq(thread.getId())));
         });
+
         withdrawContext.setCompleted();
     }
 

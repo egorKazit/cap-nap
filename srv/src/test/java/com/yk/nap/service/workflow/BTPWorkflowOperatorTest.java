@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -46,6 +47,9 @@ public class BTPWorkflowOperatorTest {
     OAuthToken oAuthToken;
 
     @Mock
+    ApplicationContext applicationContext;
+
+    @Mock
     HttpResponse<String> mockResponse;
 
     @Mock
@@ -58,6 +62,7 @@ public class BTPWorkflowOperatorTest {
         when(parameterHolder.getWorkflowUrl()).thenReturn("http://localhost:8082");
         when(parameterHolder.getWorkflowCredentials()).thenReturn("src/test/resources/test-workflow-destination.json");
         when(oAuthToken.fetch(any())).thenReturn("test_oauth");
+        when(applicationContext.getBean(OAuthToken.class)).thenReturn(oAuthToken);
         when(httpClient.send(any(), any(HttpResponse.BodyHandlers.ofString().getClass()))).thenAnswer(invocationOnMock -> {
             HttpRequest httpRequest = invocationOnMock.getArgument(0);
             assertEquals(httpRequest.method(), getMethod.get());

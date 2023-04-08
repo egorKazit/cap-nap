@@ -3,7 +3,6 @@ package com.yk.nap.configuration.destination;
 import com.google.gson.Gson;
 import com.sap.cloud.sdk.cloudplatform.connectivity.AuthenticationType;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpDestination;
-import com.yk.nap.service.oauth.OAuthToken;
 import com.yk.nap.utils.ExtensibleTokenKeeper;
 import com.yk.nap.utils.HttpOAuthTokenKey;
 import lombok.AllArgsConstructor;
@@ -40,8 +39,7 @@ public class DestinationFactory {
         if (destinationHolder == null || destinationHolder.getServices() == null)
             return;
         destinationHolder.getServices().forEach(destination -> {
-            var oAuthToken = applicationContext.getBean(OAuthToken.class);
-            var defaultHttpDestinationBuilderWithToken = applicationContext.getBean(DefaultHttpDestinationBuilderWithToken.class, oAuthToken, destination);
+            var defaultHttpDestinationBuilderWithToken = applicationContext.getBean(DefaultHttpDestinationBuilderWithToken.class, applicationContext, destination);
             destinationBuilderMap.put(destination.name, defaultHttpDestinationBuilderWithToken);
         });
     }
@@ -54,8 +52,8 @@ public class DestinationFactory {
         private final String credentials;
 
 
-        DefaultHttpDestinationBuilderWithToken(@NonNull OAuthToken oAuthToken, @NonNull DestinationHolder.Destination destination) throws IOException {
-            super(oAuthToken);
+        DefaultHttpDestinationBuilderWithToken(@NonNull ApplicationContext applicationContext, @NonNull DestinationHolder.Destination destination) throws IOException {
+            super(applicationContext);
             this.credentials = destination.destination.credentials;
             this.builder = DefaultHttpDestination
                     .builder(destination.destination.uri)

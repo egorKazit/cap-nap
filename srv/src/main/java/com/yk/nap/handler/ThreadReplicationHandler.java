@@ -7,6 +7,7 @@ import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
+import com.sap.conn.jco.JCoException;
 import com.yk.gen.com.sap.gateway.srvd_a2x.zykza_threadheader_api_def.v0001.*;
 import com.yk.gen.threadreplicationservice.ProcessContext;
 import com.yk.gen.threadreplicationservice.RevertContext;
@@ -15,10 +16,12 @@ import com.yk.gen.threadservice.Thread;
 import com.yk.gen.threadservice.ThreadService_;
 import com.yk.gen.threadservice.Thread_;
 import com.yk.nap.configuration.ParameterHolder;
+import com.yk.nap.service.backend.SAPBackEndServiceConnector;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -33,17 +36,22 @@ public class ThreadReplicationHandler implements EventHandler {
     private final ApplicationService threadReplicationService;
     private final CqnService externalServiceOperator;
     private final ParameterHolder parameterHolder;
+    private SAPBackEndServiceConnector sapBackEndServiceConnector;
 
     @SuppressWarnings("all")
-    public ThreadReplicationHandler(@Qualifier(ThreadService_.CDS_NAME) ApplicationService threadReplicationService,
-                                    @Qualifier(V0001_.CDS_NAME) CqnService externalServiceOperator, ParameterHolder parameterHolder) {
+    public ThreadReplicationHandler(@NonNull ApplicationContext applicationContext,
+                                    @Qualifier(ThreadService_.CDS_NAME) ApplicationService threadReplicationService,
+                                    @Qualifier(V0001_.CDS_NAME) CqnService externalServiceOperator,
+                                    ParameterHolder parameterHolder) {
         this.threadReplicationService = threadReplicationService;
         this.externalServiceOperator = externalServiceOperator;
         this.parameterHolder = parameterHolder;
+        if (parameterHolder.isReplicationEnabled())
+            this.sapBackEndServiceConnector = applicationContext.getBean(SAPBackEndServiceConnector.class);
     }
 
     @On(event = ProcessContext.CDS_NAME)
-    public void process(@NonNull ProcessContext processContext) {
+    public void process(@NonNull ProcessContext processContext) throws JCoException {
         var sourceEntry = threadReplicationService.run(Select.from(Thread_.class)
                 .columns(Thread_::ID, Thread_::thread, Thread_::name, thread -> thread.note().expand(), thread -> thread.attachment().expand())
                 .where(thread -> thread.ID().eq(processContext.getThreadId()))).first(Thread.class).orElseThrow(() -> new ServiceException("Error on read"));
@@ -74,10 +82,13 @@ public class ThreadReplicationHandler implements EventHandler {
         processContext.setResult(createEntityFromSourceContext.getResult().getUuid());
 
         processContext.setCompleted();
+
+        if (parameterHolder.isReplicationEnabled() && sapBackEndServiceConnector != null)
+            sapBackEndServiceConnector.replicateState(processContext.getThreadId(), SAPBackEndServiceConnector.State.REPLICATED);
     }
 
     @On(event = RevertContext.CDS_NAME)
-    public void revert(@NonNull RevertContext revertContext) {
+    public void revert(@NonNull RevertContext revertContext) throws JCoException {
         var sourceThread = threadReplicationService.run(Select.from(Thread_.class)
                 .where(thread -> thread.ID().eq(revertContext.getThreadId()))).listOf(Thread.class);
         sourceThread.forEach(thread -> {
@@ -86,12 +97,14 @@ public class ThreadReplicationHandler implements EventHandler {
             externalServiceOperator.emit(abandonContext);
         });
         revertContext.setCompleted();
+        if (parameterHolder.isReplicationEnabled() && sapBackEndServiceConnector != null)
+            sapBackEndServiceConnector.replicateState(revertContext.getThreadId(), SAPBackEndServiceConnector.State.REVERTED);
     }
 
     @Scheduled(fixedDelay = 1000)
     public void processReplications() {
 
-        if(!parameterHolder.isWorkflowEnabled())
+        if (!parameterHolder.isWorkflowEnabled())
             return;
 
         var replicatedEntries = externalServiceOperator
