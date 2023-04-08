@@ -22,7 +22,6 @@ import java.util.Optional;
 @Scope("prototype")
 public class OAuthTokenClient implements OAuthToken {
 
-
     private static final String TENANT_ID = "tenantId";
 
     @Override

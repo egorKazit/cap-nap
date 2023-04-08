@@ -2,6 +2,7 @@ package com.yk.nap.configuration.destination;
 
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpDestination;
 import com.yk.nap.service.oauth.OAuthToken;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.runner.RunWith;
@@ -53,7 +54,7 @@ public class DestinationFactoryTest {
         when(defaultHttpDestinationBuilderWithToken.getBuilder()).thenReturn(builder);
         var targetDestination = DefaultHttpDestination.builder("").build();
         when(builder.build()).thenReturn(targetDestination);
-        when(applicationContext.getBean((Class<Object>) any(), eq(oAuthToken), eq(destination))).thenReturn(defaultHttpDestinationBuilderWithToken);
+        when(applicationContext.getBean((Class<Object>) any(), eq(applicationContext), eq(destination))).thenReturn(defaultHttpDestinationBuilderWithToken);
         var destinationFactory = new DestinationFactory(destinationHolder, applicationContext);
         destinationFactory.prepareAllDestinations();
         var destinationFromFactory = destinationFactory.getDestinationByName(destination.name);
@@ -64,6 +65,8 @@ public class DestinationFactoryTest {
     public void checkDefaultHttpDestinationBuilderWithToken() throws IOException {
         OAuthToken oAuthToken = mock(OAuthToken.class);
         when(oAuthToken.fetch(any())).thenReturn("Token_hash");
+        ApplicationContext applicationContext = mock(ApplicationContext.class);
+        when(applicationContext.getBean(OAuthToken.class)).thenReturn(oAuthToken);
         var destination = new DestinationHolder.Destination();
         destination.name = "name";
         destination.model = "model";
@@ -74,7 +77,7 @@ public class DestinationFactoryTest {
         destination.destination.service = "service";
         destination.destination.credentials = "src/test/resources/test-google-cred-file.json";
         DestinationFactory.DefaultHttpDestinationBuilderWithToken defaultHttpDestinationBuilderWithToken
-                = new DestinationFactory.DefaultHttpDestinationBuilderWithToken(oAuthToken, destination);
+                = new DestinationFactory.DefaultHttpDestinationBuilderWithToken(applicationContext, destination);
         var object = defaultHttpDestinationBuilderWithToken.getBuilder().build();
         assertEquals("http://localhost:8082", object.getUri().toString());
         assertEquals("name", object.getName().get());

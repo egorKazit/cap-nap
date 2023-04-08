@@ -1,6 +1,5 @@
 package com.yk.nap.service.workflow;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.json.JSONObject;
 

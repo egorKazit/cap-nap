@@ -109,6 +109,14 @@
         </dependency>
 
         <dependency>
+            <groupId>com.sap.conn.jco</groupId>
+            <artifactId>sapjco3</artifactId>
+            <version>3.0.17</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/src/main/resources/sapjco3.jar</systemPath>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>

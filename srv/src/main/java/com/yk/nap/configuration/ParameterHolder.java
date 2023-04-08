@@ -27,16 +27,28 @@ public class ParameterHolder {
     @Getter
     private String credentialsFile;
 
-    @Value("${workflow.enabled}")
+    @Value("${workflow.enabled:false}")
     @Getter
     private boolean workflowEnabled;
 
-    @Value("${workflow.credentials}")
+    @Value("${workflow.credentials:\"\"}")
     @Getter
     private String workflowCredentials;
 
-    @Value("${workflow.uri}")
+    @Value("${workflow.uri:\"\"}")
     @Getter
     private String workflowUrl;
+
+    @Value("${replication.enabled:false}")
+    @Getter
+    private boolean replicationEnabled;
+
+    @Value("${replication.credentials-file:\"\"}")
+    @Getter
+    private String replicationCredentialsFile;
+
+    @Value("${replication.destination-name:\"\"}")
+    @Getter
+    private String replicationDestinationName;
 
 }

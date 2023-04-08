@@ -32,12 +32,10 @@ public class AttachmentLocalDriveOperatorTest {
     @Mock
     ParameterHolder parameterHolder;
 
-    private String temporaryLocation;
-
 
     @BeforeEach
     public void prepare() throws IOException {
-        temporaryLocation = Files.createTempDirectory("temporaryLocation").toFile().getAbsolutePath();
+        String temporaryLocation = Files.createTempDirectory("temporaryLocation").toFile().getAbsolutePath();
         when(parameterHolder.getDmsTargetFolder()).thenReturn(temporaryLocation);
     }
 

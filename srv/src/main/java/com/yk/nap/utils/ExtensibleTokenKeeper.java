@@ -1,21 +1,21 @@
 package com.yk.nap.utils;
 
 import com.yk.nap.service.oauth.OAuthToken;
+import org.springframework.context.ApplicationContext;
 
-import javax.annotation.PostConstruct;
 import java.io.IOException;
 
 public abstract class ExtensibleTokenKeeper {
 
-    protected final OAuthToken oAuthToken;
+    private final ApplicationContext applicationContext;
 
-    protected ExtensibleTokenKeeper(OAuthToken oAuthToken) {
-        this.oAuthToken = oAuthToken;
+    protected ExtensibleTokenKeeper(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
     }
 
     protected String getToken() throws IOException {
         HttpOAuthTokenKey httpOAuthTokenKey = getHttpOAuthTokenKey();
-        return oAuthToken.fetch(httpOAuthTokenKey);
+        return applicationContext.getBean(OAuthToken.class).fetch(httpOAuthTokenKey);
     }
 
     protected abstract HttpOAuthTokenKey getHttpOAuthTokenKey() throws IOException;
