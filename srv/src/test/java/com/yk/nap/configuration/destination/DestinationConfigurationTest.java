@@ -9,6 +9,7 @@ import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,7 +37,7 @@ public class DestinationConfigurationTest {
     }
 
     @Test
-    public void processDestinations() {
+    public void processDestinations() throws IOException {
         DestinationHolder destinationHolder = mock(DestinationHolder.class);
         DestinationFactory destinationFactory = mock(DestinationFactory.class);
         when(destinationFactory.getDestinationByName(any())).thenReturn(DefaultHttpDestination.builder("http://localhost:8082").build());
